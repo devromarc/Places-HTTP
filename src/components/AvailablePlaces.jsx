@@ -3,38 +3,29 @@ import Places from "./Places.jsx";
 import ErrorPage from "./ErrorPage.jsx";
 import { sortPlacesByDistance } from "../loc.js";
 import { fetchAvailablePlaces } from "../http.js";
+import { useFetch } from "../hooks/useFetch.js";
+
+async function fetchSortedPlaces() {
+  const places = await fetchAvailablePlaces();
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition((position) => {
+      const sortedPlaces = sortPlacesByDistance(
+        places,
+        position.coords.latitude,
+        position.coords.longitude
+      );
+      resolve(sortedPlaces);
+    });
+  });
+}
 
 export default function AvailablePlaces({ onSelectPlace }) {
-  // loading state - to tell the user that you are currently fetching the data
-  const [isFetching, setisFetching] = useState(false);
-  // data state - storing the data you're fetching
-  const [availablePlaces, setavailablePlaces] = useState([]);
-  // error state - show potential errors.
-  const [error, seterror] = useState();
-
-  useEffect(() => {
-    async function fetchPlaces() {
-      setisFetching(true);
-
-      try {
-        const places = await fetchAvailablePlaces();
-
-        navigator.geolocation.getCurrentPosition((position) => {
-          const sortedPlaces = sortPlacesByDistance(
-            places,
-            position.coords.latitude,
-            position.coords.longitude
-          );
-          setavailablePlaces(sortedPlaces);
-          setisFetching(false);
-        });
-      } catch (error) {
-        seterror(error);
-        setisFetching(false);
-      }
-    }
-    fetchPlaces();
-  }, []);
+  const {
+    error,
+    fetchedData: availablePlaces,
+    isFetching,
+  } = useFetch(fetchSortedPlaces, []);
 
   if (error) {
     return <ErrorPage title="An error occured" message={error.message} />;
